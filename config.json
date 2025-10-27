@@ -1,0 +1,24 @@
+{
+  "model_id": "Qwen/Qwen2.5-Coder-7B-Instruct",
+  "torch_dtype": "bfloat16",
+  "device_map": "auto",
+  "quantization": "bnb-8bit",
+
+  "use_chat_template": true,
+  "system": "You are a highly capable coding assistant. Answer in Japanese unless code is required.",
+
+  "max_new_tokens": 512,
+  "min_new_tokens": 0,
+  "temperature": 0.7,
+  "top_p": 0.9,
+  "top_k": 0,
+  "repetition_penalty": 1.05,
+  "num_beams": 1,
+  "do_sample": true,
+  "no_repeat_ngram_size": 0,
+  "length_penalty": 1.0,
+  "early_stopping": false,
+
+  "stop_words": [],
+  "return_json": true
+}
