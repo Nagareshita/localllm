@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qwen Local Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            width: 90%;
+            max-width: 900px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .header .status {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        .status.connected {
+            color: #4ade80;
+        }
+        
+        .status.disconnected {
+            color: #fca5a5;
+        }
+        
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .message.user {
+            justify-content: flex-end;
+        }
+        
+        .message.assistant {
+            justify-content: flex-start;
+        }
+        
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .message.assistant .message-content {
+            background: white;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        
+        .stats {
+            font-size: 11px;
+            color: rgba(255,255,255,0.7);
+            margin-top: 5px;
+        }
+        
+        .message.assistant .stats {
+            color: #999;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            color: #667eea;
+            padding: 10px;
+            font-style: italic;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #ddd;
+            display: flex;
+            gap: 10px;
+        }
+        
+        #userInput {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #667eea;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        #userInput:focus {
+            border-color: #764ba2;
+        }
+        
+        #sendBtn {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        #sendBtn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        #sendBtn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        
+        #sendBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #c33;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Qwen Local Chat</h1>
+            <div class="status disconnected" id="status">接続中...</div>
+        </div>
+        
+        <div class="chat-container" id="chatContainer">
+            <div class="message assistant">
+                <div class="message-content">こんにちは！何でも聞いてください。</div>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">🤔 生成中...</div>
+        
+        <div class="input-container">
+            <input type="text" id="userInput" placeholder="メッセージを入力..." />
+            <button id="sendBtn">送信</button>
+        </div>
+    </div>
+
+    <script>
+        // 設定: WSL2のAPIサーバーアドレス
+        const API_BASE = 'http://localhost:8000';
+        
+        const chatContainer = document.getElementById('chatContainer');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const loading = document.getElementById('loading');
+        const statusEl = document.getElementById('status');
+        
+        let history = [];
+        let isConnected = false;
+
+        // 接続確認
+        async function checkConnection() {
+            try {
+                const response = await fetch(`${API_BASE}/health`, {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(3000)
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    statusEl.textContent = `✓ ${data.model || 'Connected'}`;
+                    statusEl.className = 'status connected';
+                    isConnected = true;
+                } else {
+                    throw new Error('Server error');
+                }
+            } catch (error) {
+                statusEl.textContent = '✗ 未接続';
+                statusEl.className = 'status disconnected';
+                isConnected = false;
+            }
+        }
+
+        // メッセージ追加
+        function addMessage(role, content, stats = null) {
+            const msg = document.createElement('div');
+            msg.className = `message ${role}`;
+            
+            const msgContent = document.createElement('div');
+            msgContent.className = 'message-content';
+            msgContent.textContent = content;
+            
+            if (stats) {
+                const statsDiv = document.createElement('div');
+                statsDiv.className = 'stats';
+                statsDiv.textContent = `トークン: ${stats.prompt_tokens} + ${stats.completion_tokens} = ${stats.prompt_tokens + stats.completion_tokens}`;
+                msgContent.appendChild(statsDiv);
+            }
+            
+            msg.appendChild(msgContent);
+            chatContainer.appendChild(msg);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // エラー表示
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = `❌ ${message}`;
+            chatContainer.appendChild(errorDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // メッセージ送信
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+            
+            if (!isConnected) {
+                showError('APIサーバーに接続できません。WSL2でサーバーが起動していることを確認してください。');
+                return;
+            }
+            
+            // ユーザーメッセージ表示
+            addMessage('user', message);
+            userInput.value = '';
+            sendBtn.disabled = true;
+            loading.classList.add('active');
+            
+            try {
+                // APIリクエスト
+                const response = await fetch(`${API_BASE}/v1/chat/completions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: 'Qwen/Qwen2.5-Coder-7B-Instruct',
+                        messages: [
+                            ...history.flatMap(h => [
+                                { role: 'user', content: h.user },
+                                { role: 'assistant', content: h.assistant }
+                            ]),
+                            { role: 'user', content: message }
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 512
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                const assistantMessage = data.choices[0].message.content;
+                const usage = data.usage;
+                
+                // アシスタントメッセージ表示
+                addMessage('assistant', assistantMessage, usage);
+                
+                // 履歴更新（最大10ターン）
+                history.push({ user: message, assistant: assistantMessage });
+                if (history.length > 10) {
+                    history.shift();
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showError(`エラー: ${error.message}`);
+                
+                // 接続状態を再確認
+                checkConnection();
+            } finally {
+                loading.classList.remove('active');
+                sendBtn.disabled = false;
+                userInput.focus();
+            }
+        }
+
+        // イベントリスナー
+        sendBtn.addEventListener('click', sendMessage);
+        
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // 初期化
+        checkConnection();
+        userInput.focus();
+        
+        // 定期的に接続確認（30秒ごと）
+        setInterval(checkConnection, 30000);
+    </script>
+</body>
+</html>

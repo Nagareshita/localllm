@@ -5,7 +5,7 @@
   "quantization": "bnb-8bit",
 
   "use_chat_template": true,
-  "system": "You are a highly capable coding assistant. Answer in Japanese unless code is required.",
+  "system": "You are a helpful coding assistant. Answer in Japanese unless code is required.",
 
   "max_new_tokens": 512,
   "min_new_tokens": 0,
@@ -19,6 +19,5 @@
   "length_penalty": 1.0,
   "early_stopping": false,
 
-  "stop_words": [],
-  "return_json": true
+  "stop_words": []
 }
