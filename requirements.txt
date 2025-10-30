@@ -1,0 +1,23 @@
+# --- API / Server ---
+fastapi==0.120.3
+uvicorn[standard]==0.38.0
+
+# --- HF stack ---
+transformers==4.57.1
+accelerate==1.11.0
+huggingface-hub==0.34.3
+# tokenizers は transformers が適切版を解決。明示ピン留めしない
+
+# --- Quantization ---
+# Windows + CUDA 12.1 は bitsandbytes 0.43.x で公式対応（要 VS2022/MSVC 19.38+）
+bitsandbytes==0.43.3
+
+# --- LlamaIndex family ---
+llama-index==0.14.6
+llama-index-llms-openai-like==0.5.3
+llama-index-embeddings-huggingface==0.6.1
+llama-index-vector-stores-qdrant==0.8.6
+
+# --- Vector DB / Embeddings ---
+qdrant-client==1.15.1
+sentence-transformers==5.1.2
