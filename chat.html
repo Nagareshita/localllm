@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coder Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f0f0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chat-container {
+            width: 90%;
+            max-width: 900px;
+            height: 90vh;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h1 {
+            font-size: 20px;
+            font-weight: normal;
+        }
+
+        .header-buttons button {
+            background: transparent;
+            border: 1px solid white;
+            color: white;
+            padding: 5px 15px;
+            margin-left: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .header-buttons button:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #fafafa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.assistant {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 8px;
+            line-height: 1.5;
+        }
+
+        .message.user .message-content {
+            background: #3498db;
+            color: white;
+        }
+
+        .message.assistant .message-content {
+            background: white;
+            color: #333;
+            border: 1px solid #e0e0e0;
+        }
+
+        .message-content pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+        }
+
+        .message-content code {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .chat-input-container {
+            padding: 15px 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+        }
+
+        #userInput {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        #userInput:focus {
+            border-color: #3498db;
+        }
+
+        #sendButton {
+            padding: 10px 25px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        #sendButton:hover {
+            background: #2980b9;
+        }
+
+        #sendButton:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            padding: 10px 20px;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .status-message {
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 13px;
+            display: none;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-message.active {
+            display: block;
+        }
+
+        .settings {
+            padding: 10px 20px;
+            background: #ecf0f1;
+            border-bottom: 1px solid #ddd;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .settings-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .settings label {
+            display: flex;
+            flex-direction: column;
+            font-size: 12px;
+            color: #2c3e50;
+        }
+
+        .settings input,
+        .settings select {
+            padding: 4px 8px;
+            border: 1px solid #bdc3c7;
+            border-radius: 3px;
+            font-size: 12px;
+            min-width: 160px;
+        }
+
+        .settings .inline {
+            flex-direction: row;
+            align-items: center;
+            gap: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>Coder Chat</h1>
+            <div class="header-buttons">
+                <button onclick="loadHistory()" title="Session IDまたは一覧で選んだ履歴を読み込みます">履歴読込</button>
+                <button onclick="clearHistory()" title="選択中のセッションの履歴をQdrantから削除します">履歴削除</button>
+                <button onclick="newChat()" title="新しい会話を開始します。次の最初の発話がセッションIDになります（自動設定）">新規チャット</button>
+            </div>
+        </div>
+        
+        <div class="settings">
+            <div class="settings-row">
+                <label>
+                    API URL
+                    <input type="text" id="apiUrl" value="http://localhost:8003/v1/chat/completions" title="OpenAI互換のチャットエンドポイントURL（通常は /v1/chat/completions）">
+                </label>
+                <label>
+                    History API
+                    <input type="text" id="historyApiUrl" value="http://localhost:8004" title="履歴サーバーのベースURL（/save_history など）">
+                </label>
+                <label>
+                    Model ID
+                    <input type="text" id="modelId" value="Qwen/Qwen2.5-Coder-7B-Instruct" placeholder="例: Qwen/Qwen2.5-Coder-7B-Instruct" title="サーバー起動時のモデルIDと一致させてください">
+                </label>
+                <label title="会話の前提や役割、文体、禁止事項などを指定します。全メッセージの先頭に付与され、振る舞いを一貫させます。">
+                    System Prompt
+                    <input type="text" id="systemPrompt" value="あなたは優秀なプログラミングアシスタントです。常に日本語で回答してください。コードの品質、可読性、保守性を重視し、ベストプラクティスに従ったコードを生成してください。"placeholder="例: あなたは有能なAIアシスタントです。">
+                </label>
+                <label>
+                    Session ID
+                    <input type="text" id="sessionId" value="" placeholder="未入力なら最初の発話から自動設定" title="履歴のキー。日本語可。自由に編集できます">
+                </label>
+                <label>
+                    Sessions
+                    <select id="sessionSelect" title="保存済みセッション一覧から選択"></select>
+                </label>
+                <button onclick="loadSessionList()" title="セッション一覧を更新">更新</button>
+            </div>
+            <div class="settings-row">
+                <label>
+                    Temperature
+                    <input type="number" id="temperature" value="0.7" min="0" max="2" step="0.1" title="0で貪欲。大きいほど多様性が増えます">
+                </label>
+                <label>
+                    Top P
+                    <input type="number" id="topP" value="0.95" min="0" max="1" step="0.01" title="確率質量が指定値に達するまで上位からサンプリング">
+                </label>
+                <label>
+                    Max Tokens
+                    <input type="number" id="maxTokens" value="512" min="1" max="2048" step="1" title="新規生成トークン数の上限">
+                </label>
+                <label>
+                    Stop（カンマ区切り）
+                    <input type="text" id="stopSequences" placeholder="例: </s>,ユーザー" title="これらのシーケンスで出力を打ち切り">
+                </label>
+                <label class="inline">
+                    <input type="checkbox" id="streamToggle" checked> <span title="SSEで逐次トークンを受け取りながら表示">Stream</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="status-message" id="statusMessage"></div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message assistant">
+                <div class="message-content">
+                    こんにちは！Coder Chatへようこそ。何でも質問してください。
+                </div>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">処理中...</div>
+
+        <div class="chat-input-container">
+            <input 
+                type="text" 
+                id="userInput" 
+                placeholder="メッセージを入力してください..."
+                onkeypress="if(event.key === 'Enter' && !event.shiftKey) sendMessage()"
+            >
+            <button id="sendButton" onclick="sendMessage()">送信</button>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+        const loading = document.getElementById('loading');
+        const statusMessage = document.getElementById('statusMessage');
+        const apiUrlInput = document.getElementById('apiUrl');
+        const historyApiUrlInput = document.getElementById('historyApiUrl');
+        const sessionIdInput = document.getElementById('sessionId');
+        const modelIdInput = document.getElementById('modelId');
+        const systemPromptInput = document.getElementById('systemPrompt');
+        const sessionSelect = document.getElementById('sessionSelect');
+        const temperatureInput = document.getElementById('temperature');
+        const topPInput = document.getElementById('topP');
+        const maxTokensInput = document.getElementById('maxTokens');
+        const stopSequencesInput = document.getElementById('stopSequences');
+        const streamToggle = document.getElementById('streamToggle');
+
+        let conversationHistory = [];
+
+        // 初期は空欄。既存セッション一覧を読み込み
+        loadSessionList();
+
+        function generateSessionIdFromText(text) {
+            const head = (text || '').trim().slice(0, 10);
+            return head ? `${head}...` : 'session_' + Date.now();
+        }
+
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message ${type} active`;
+            setTimeout(() => {
+                statusMessage.classList.remove('active');
+            }, 3000);
+        }
+
+        function addMessage(role, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            updateMessageContent(contentDiv, content);
+            messageDiv.appendChild(contentDiv);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return { wrapper: messageDiv, content: contentDiv };
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatMessageContent(content) {
+            // 三重バッククォートのコードブロックを抜き出して分割する
+            const fenceRe = /```(\w+)?\r?\n([\s\S]*?)```/g;
+            let html = '';
+            let lastIndex = 0;
+            let m;
+            while ((m = fenceRe.exec(content)) !== null) {
+                const before = content.slice(lastIndex, m.index);
+                html += formatInlineAndText(before);
+                const lang = m[1] || '';
+                const code = m[2] || '';
+                html += `<pre><code${lang ? ` class="language-${escapeHtml(lang)}"` : ''}>${escapeHtml(code)}</code></pre>`;
+                lastIndex = fenceRe.lastIndex;
+            }
+            const rest = content.slice(lastIndex);
+            html += formatInlineAndText(rest);
+            return html;
+        }
+
+        function formatInlineAndText(text) {
+            // まずHTMLをエスケープ
+            let safe = escapeHtml(text);
+            // インラインコード `code` を <code> に
+            safe = safe.replace(/`([^`]+)`/g, (_m, g1) => `<code>${g1}</code>`);
+            // 残りの改行は <br>
+            safe = safe.replace(/\n/g, '<br>');
+            return safe;
+        }
+
+        function updateMessageContent(element, content) {
+            element.innerHTML = formatMessageContent(content || '');
+        }
+
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            addMessage('user', message);
+            userInput.value = '';
+            sendButton.disabled = true;
+            loading.classList.add('active');
+
+            conversationHistory.push({
+                role: 'user',
+                content: message,
+                timestamp: new Date().toISOString()
+            });
+
+            // セッションID未設定なら最初の発話から自動設定
+            if (!sessionIdInput.value) {
+                sessionIdInput.value = generateSessionIdFromText(message);
+            }
+
+            let assistantEntry = null;
+            const useStream = streamToggle.checked;
+            const payload = buildPayload(useStream);
+            let assistantText = '';
+
+            try {
+                const apiUrl = apiUrlInput.value;
+
+                if (useStream) {
+                    assistantEntry = addMessage('assistant', '');
+                    const result = await streamChatCompletion(apiUrl, payload, assistantEntry);
+                    assistantText = result.text || '';
+                } else {
+                    const result = await executeChatCompletion(apiUrl, payload);
+                    assistantText = result.text || '';
+                    assistantEntry = addMessage('assistant', assistantText || '(応答なし)');
+                }
+
+                conversationHistory.push({
+                    role: 'assistant',
+                    content: assistantText,
+                    timestamp: new Date().toISOString()
+                });
+
+                // 1会話ごとに自動保存（静かに）
+                await saveHistory(true);
+                // 一覧を更新
+                await loadSessionList();
+
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus(`エラー: ${error.message}`, 'error');
+                if (assistantEntry) {
+                    removeMessageEntry(assistantEntry);
+                }
+                conversationHistory.pop();
+            } finally {
+                loading.classList.remove('active');
+                sendButton.disabled = false;
+                userInput.focus();
+            }
+        }
+
+        function removeMessageEntry(entry) {
+            if (entry && entry.wrapper && entry.wrapper.parentNode) {
+                entry.wrapper.parentNode.removeChild(entry.wrapper);
+            }
+        }
+
+        function buildPayload(useStream) {
+            const temperature = clampNumber(parseFloat(temperatureInput.value), 0, 2, 0.7);
+            const topP = clampNumber(parseFloat(topPInput.value), 0, 1, 0.95);
+            const maxTokens = clampInteger(parseInt(maxTokensInput.value, 10), 1, 2048, 512);
+            const stopSequences = getStopSequences();
+
+            const modelId = (modelIdInput.value || '').trim();
+            const sys = (systemPromptInput.value || '').trim();
+            let messages = conversationHistory.map(m => ({ role: m.role, content: m.content }));
+            if (sys) {
+                messages = [{ role: 'system', content: sys }, ...messages];
+            }
+
+            const payload = {
+                model: modelId || 'Qwen/Qwen2.5-Coder-7B-Instruct',
+                messages,
+                temperature,
+                top_p: topP,
+                max_tokens: maxTokens,
+                stream: useStream
+            };
+
+            if (stopSequences.length > 0) {
+                payload.stop = stopSequences;
+            }
+
+            return payload;
+        }
+
+        function clampNumber(value, min, max, fallback) {
+            if (!Number.isFinite(value)) return fallback;
+            if (typeof min === 'number') value = Math.max(value, min);
+            if (typeof max === 'number') value = Math.min(value, max);
+            return value;
+        }
+
+        function clampInteger(value, min, max, fallback) {
+            if (!Number.isFinite(value)) return fallback;
+            value = Math.round(value);
+            if (typeof min === 'number') value = Math.max(value, min);
+            if (typeof max === 'number') value = Math.min(value, max);
+            return value;
+        }
+
+        function getStopSequences() {
+            if (!stopSequencesInput.value.trim()) return [];
+            return stopSequencesInput.value.split(',').map(s => s.trim()).filter(Boolean);
+        }
+
+        async function executeChatCompletion(apiUrl, payload) {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const assistantMessage = data?.choices?.[0]?.message?.content || '';
+            return { text: assistantMessage, usage: data.usage };
+        }
+
+        async function streamChatCompletion(apiUrl, payload, assistantEntry) {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok || !response.body) {
+                throw new Error(`API Error: ${response.status}`);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
+            let assistantText = '';
+            let finished = false;
+
+            while (!finished) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+
+                let boundary = buffer.indexOf('\n\n');
+                while (boundary !== -1) {
+                    const rawEvent = buffer.slice(0, boundary).trim();
+                    buffer = buffer.slice(boundary + 2);
+                    boundary = buffer.indexOf('\n\n');
+
+                    if (!rawEvent) continue;
+                    const dataLine = rawEvent.replace(/^data:\s*/, '');
+                    if (dataLine === '[DONE]') {
+                        finished = true;
+                        break;
+                    }
+
+                    let parsed;
+                    try {
+                        parsed = JSON.parse(dataLine);
+                    } catch (_) {
+                        continue;
+                    }
+
+                    const choice = parsed?.choices?.[0];
+                    if (choice?.delta?.content) {
+                        assistantText += choice.delta.content;
+                        updateMessageContent(assistantEntry.content, assistantText);
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }
+
+                    if (choice?.finish_reason === 'stop') {
+                        finished = true;
+                    }
+                }
+            }
+
+            if (!assistantText) {
+                updateMessageContent(assistantEntry.content, '(応答なし)');
+            }
+
+            return { text: assistantText };
+        }
+
+        async function saveHistory(silent = false) {
+            try {
+                const historyApiUrl = historyApiUrlInput.value;
+                const sessionId = sessionIdInput.value;
+
+                const response = await fetch(`${historyApiUrl}/save_history`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        messages: conversationHistory
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('履歴の保存に失敗しました');
+                }
+
+                const data = await response.json();
+                if (!silent) {
+                    showStatus(`履歴を保存しました (${data.message_count}件)`, 'success');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                if (!silent) {
+                    showStatus(`保存エラー: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function loadHistory() {
+            try {
+                const historyApiUrl = historyApiUrlInput.value;
+                const chosen = (sessionSelect && sessionSelect.value) ? sessionSelect.value : '';
+                const sessionId = chosen || sessionIdInput.value;
+                if (!sessionId) {
+                    showStatus('Session ID を入力するか一覧から選択してください', 'error');
+                    return;
+                }
+
+                const response = await fetch(`${historyApiUrl}/get_history`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionId
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('履歴の読み込みに失敗しました');
+                }
+
+                const data = await response.json();
+
+                if (data.messages && data.messages.length > 0) {
+                    conversationHistory = data.messages;
+                    // 読み込んだセッションIDを明示的に保持（以降の自動生成を抑制）
+                    sessionIdInput.value = sessionId;
+                    if (sessionSelect) {
+                        // ドロップダウンにも選択を反映
+                        sessionSelect.value = sessionId;
+                    }
+                    
+                    // チャット表示をクリアして再構築
+                    chatMessages.innerHTML = '';
+                    conversationHistory.forEach(msg => {
+                        addMessage(msg.role, msg.content);
+                    });
+                    
+                    showStatus(`履歴を読み込みました (${data.messages.length}件)`, 'success');
+                } else {
+                    showStatus('保存された履歴がありません', 'error');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus(`読込エラー: ${error.message}`, 'error');
+            }
+        }
+        async function clearHistory() {
+            if (!confirm('Qdrantから履歴を削除しますか？')) return;
+
+            try {
+                const historyApiUrl = historyApiUrlInput.value;
+                const chosen = (sessionSelect && sessionSelect.value) ? sessionSelect.value : '';
+                const sessionId = chosen || sessionIdInput.value;
+                if (!sessionId) {
+                    showStatus('Session ID を入力するか一覧から選択してください', 'error');
+                    return;
+                }
+
+                const response = await fetch(`${historyApiUrl}/clear_history`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionId
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('履歴の削除に失敗しました');
+                }
+
+                const data = await response.json();
+                showStatus(`履歴を削除しました (${data.deleted_count}件)`, 'success');
+                await loadSessionList();
+
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus(`削除エラー: ${error.message}`, 'error');
+            }
+        }
+
+        function newChat() {
+            if (!confirm('新規チャットを開始しますか？')) return;
+            // 会話履歴をリセット
+            conversationHistory = [];
+            // セッションIDを空にして、次の最初の発話で自動設定させる
+            sessionIdInput.value = '';
+            if (sessionSelect) sessionSelect.value = '';
+            // 画面を初期メッセージに戻す
+            chatMessages.innerHTML = '<div class="message assistant"><div class="message-content">新しいチャットを開始しました。メッセージを入力してください。</div></div>';
+            showStatus('新規チャットを開始しました', 'success');
+            userInput.focus();
+        }
+
+        userInput.focus();
+
+        async function loadSessionList() {
+            try {
+                const historyApiUrl = historyApiUrlInput.value;
+                const res = await fetch(`${historyApiUrl}/list_sessions`);
+                if (!res.ok) throw new Error('一覧取得に失敗しました');
+                const data = await res.json();
+                sessionSelect.innerHTML = '';
+                (data.sessions || []).forEach(sid => {
+                    const opt = document.createElement('option');
+                    opt.value = sid;
+                    opt.textContent = sid;
+                    sessionSelect.appendChild(opt);
+                });
+                sessionSelect.onchange = () => {
+                    sessionIdInput.value = sessionSelect.value;
+                };
+            } catch (e) {
+                console.error(e);
+                showStatus(`一覧エラー: ${e.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# vLLM 本体。api_server.py は vLLM 0.11.0 の起動仕様に合わせています
+# （openai.api_server に main はなく run_server を使用）。
+vllm>=0.11.0
+# 8bit 量子化に必須。vLLM 0.11.0 は bitsandbytes>=0.46.1 を要求します。
+bitsandbytes>=0.46.1
+# Transformers本体。OpenAI互換APIでのテキスト生成に必須。
+transformers>=4.40.0
+# device_map="auto" を使うため Accelerate を追加。
+accelerate>=0.33.0
+fastapi>=0.115.6
+uvicorn>=0.34.0
+pydantic>=2.10.6
+qdrant-client>=1.15.1
+python-dotenv>=1.0.1
