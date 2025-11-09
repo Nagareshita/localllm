@@ -19,8 +19,8 @@
 Mambaで環境を作成します。
 
 ```bash
-mamba create -n starcoder2 python=3.12 -y
-conda activate starcoder2
+mamba create -n llmapi python=3.12 -y
+conda activate llmapi
 ```
 ---
 
@@ -62,7 +62,7 @@ CUDA version: 12.6
 プロジェクトディレクトリに移動し、requirements.txtからインストールします。
 
 ```bash
-cd starcoder2
+cd localllm
 uv pip install -r requirements.txt
 ```
 ### インストールされる主要パッケージ（抜粋）
