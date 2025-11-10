@@ -52,7 +52,7 @@ def parse_args() -> argparse.Namespace:
                         help="量子化方式")
     parser.add_argument("--host", default="0.0.0.0", help="ホスト")
     parser.add_argument("--port", type=int, default=8003, help="ポート")
-    parser.add_argument("--model", default="bigcode/starcoder2-15b-instruct-v0.1",
+    parser.add_argument("--model", default="Qwen/Qwen2.5-Coder-7B-Instruct",
                         help="Hugging Face モデルID")
     parser.add_argument("--model-dir", default="./models",
                         help="モデルキャッシュディレクトリ")

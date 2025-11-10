@@ -193,7 +193,7 @@ Session IDを変更することで、複数の会話を管理できます。
   - リクエストボディ例（非ストリーミング）
     ```json
     {
-      "model": "bigcode/starcoder2-15b-instruct-v0.1",
+      "model": "Qwen/Qwen2.5-Coder-7B-Instruct",
       "messages": [
         {"role": "system", "content": "あなたは有能なAIアシスタントです。"},
         {"role": "user", "content": "FizzBuzzをPythonで書いて"}
@@ -211,7 +211,7 @@ Session IDを変更することで、複数の会話を管理できます。
   - リクエストボディ例（非ストリーミング）
     ```json
     {
-      "model": "bigcode/starcoder2-15b-instruct-v0.1",
+      "model": "Qwen/Qwen2.5-Coder-7B-Instruct",
       "prompt": "Write a haiku about the sea",
       "temperature": 0.7,
       "top_p": 0.95,
@@ -227,7 +227,7 @@ Session IDを変更することで、複数の会話を管理できます。
   curl -s http://localhost:8003/v1/chat/completions \
     -H 'Content-Type: application/json' \
     -d '{
-          "model":"bigcode/starcoder2-15b-instruct-v0.1",
+          "model":"Qwen/Qwen2.5-Coder-7B-Instruct",
           "messages":[
             {"role":"user","content":"こんにちは。自己紹介して"}
           ],
@@ -242,7 +242,7 @@ Session IDを変更することで、複数の会話を管理できます。
   curl -N http://localhost:8003/v1/chat/completions \
     -H 'Content-Type: application/json' \
     -d '{
-          "model":"bigcode/starcoder2-15b-instruct-v0.1",
+          "model":"Qwen/Qwen2.5-Coder-7B-Instruct",
           "messages":[{"role":"user","content":"短いジョークを言って"}],
           "stream":true
         }'
@@ -253,7 +253,7 @@ Session IDを変更することで、複数の会話を管理できます。
   curl -s http://localhost:8003/v1/completions \
     -H 'Content-Type: application/json' \
     -d '{
-          "model":"bigcode/starcoder2-15b-instruct-v0.1",
+          "model":"Qwen/Qwen2.5-Coder-7B-Instruct",
           "prompt":"List 3 colors:",
           "temperature":0.2,
           "max_tokens":32
@@ -325,7 +325,7 @@ starcoder2-project/
 
 - **Transformers**: https://huggingface.co/docs/transformers
 - **bitsandbytes**: https://github.com/TimDettmers/bitsandbytes
-- **StarCoder2モデル**: https://huggingface.co/bigcode/starcoder2-15b-instruct-v0.1
+- **StarCoder2モデル**: https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct
 - **Qdrant公式ドキュメント**: https://qdrant.tech/documentation/
 
 ---
